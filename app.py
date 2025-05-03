@@ -1,4 +1,5 @@
 import streamlit as st
+st.image('financial fraud detector logo.png', width=200)
 import pandas as pd
 import joblib
 import lightgbm as lgb 
@@ -10,7 +11,7 @@ encoder = joblib.load("label_encoder.jb")
 def haversine(lat1, lon1, lat2, lon2):
     return geodesic((lat1, lon1),(lat2,lon2)).km
 
-st.title("Fraud Detection System")
+st.title("financial fraud detection System")
 st.write("Enter the Transaction details Below")
 
 merchant = st.text_input("Merchant Name")
@@ -56,11 +57,4 @@ def display_logo():
             unsafe_allow_html=True
         )
 
-display_logo()
-
-        input_data['cc_num'] = input_data['cc_num'].apply(lambda x:hash(x) % (10 ** 2))
-        prediction = model.predict(input_data)[0]
-        result = "Fraudulant Transaction" if prediction == 1 else " Legitimate Transaction"
-        st.subheader(f"Prediction: {result}")
-    else:
-        st.error("Please Fill all required fields")
+   

@@ -57,4 +57,14 @@ def display_logo():
             unsafe_allow_html=True
         )
 
-   
+display_logo()
+
+        input_data['cc_num'] = input_data['cc_num'].apply(lambda x:hash(x) % (10 ** 2))
+        prediction = model.predict(input_data)[0]
+    result = "Fraudulent" if prediction[0] == 1 else "Legitimate"
+    st.subheader("Prediction Result:")
+    st.success(f"The transaction is **{result}**.")
+        result = "Fraudulant Transaction" if prediction == 1 else " Legitimate Transaction"
+        st.subheader(f"Prediction: {result}")
+    else:
+        st.error("Please Fill all required fields")

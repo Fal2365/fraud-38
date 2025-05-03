@@ -1,31 +1,33 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import lightgbm as lgb 
+import lightgbm as lgb
 from geopy.distance import geodesic
 import base64
 from PIL import Image
 
 # Load model and encoders
-model = joblib.load("fraud_detection_model.jb")
-encoder = joblib.load("label_encoder.jb")
+model = joblib.load("fixed_fraud_detection_model.jb")
+encoder = joblib.load("fixed_label_encoder.jb")
 
 def haversine(lat1, lon1, lat2, lon2):
     return geodesic((lat1, lon1), (lat2, lon2)).km
 
-# Display logo at the top of the app
+# Display logo
 def display_logo():
     file_path = "financial fraud detector logo.png"
     with open(file_path, "rb") as f:
-        data = f.read()
-        encoded = base64.b64encode(data).decode()
+        encoded = base64.b64encode(f.read()).decode()
         st.markdown(
-            f'<div style="text-align: center; padding-bottom: 10px;"><img src="data:image/png;base64,{encoded}" width="150"/></div>',
+            f'<div style="text-align: center; padding-bottom: 10px;">'
+            f'<img src="data:image/png;base64,{encoded}" width="150"/></div>',
             unsafe_allow_html=True
         )
 
-# UI
+# Set page config
 st.set_page_config(page_title="Financial Fraud Detection System", layout="centered", page_icon="💳")
+
+# Apply styling
 st.markdown("""
     <style>
         .main {
@@ -40,9 +42,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Render logo
+# Render UI
 display_logo()
-
 st.markdown("<h1 style='text-align: center;'>Financial Fraud Detection System</h1>", unsafe_allow_html=True)
 st.markdown("<h5 style='text-align: center;'>Enter the transaction details below</h5>", unsafe_allow_html=True)
 
@@ -50,6 +51,7 @@ st.markdown("<h5 style='text-align: center;'>Enter the transaction details below
 merchant = st.text_input("Merchant Name")
 category = st.selectbox("Category", ["Grocery", "Electronics", "Travel", "Food", "Clothing", "Other"])
 amt = st.number_input("Transaction Amount", min_value=0.0, format="%.2f")
+
 col1, col2 = st.columns(2)
 with col1:
     lat = st.number_input("Latitude", format="%.6f")
@@ -69,27 +71,33 @@ with col5:
 gender = st.selectbox("Gender", ["Male", "Female"])
 cc_num = st.text_input("Credit Card number")
 
-# Predict button
+# Compute distance
 distance = haversine(lat, long, merch_lat, merch_long)
 
+# Prediction
 if st.button("Check For Fraud"):
     if merchant and category and cc_num:
         input_data = pd.DataFrame([[merchant, category, amt, distance, hour, day, month, gender, cc_num]],
                                   columns=['merchant', 'category', 'amt', 'distance', 'hour', 'day', 'month', 'gender', 'cc_num'])
 
-        categorical_col = ['merchant', 'category', 'gender']
-        for col in categorical_col:
+        # Encode categorical variables
+        categorical_cols = ['merchant', 'category', 'gender']
+        for col in categorical_cols:
             try:
                 input_data[col] = encoder[col].transform(input_data[col])
             except ValueError:
-                input_data[col] = -1
+                input_data[col] = -1  # Unknown category fallback
 
+        # Hash cc_num
         input_data['cc_num'] = input_data['cc_num'].apply(lambda x: hash(x) % (10 ** 2))
+
+        # Predict
         prediction = model.predict(input_data)[0]
         result = "🔒 Fraudulent Transaction" if prediction == 1 else "✅ Legitimate Transaction"
         st.success(f"Prediction: {result}")
     else:
         st.error("Please fill all required fields.")
+
 
               
 

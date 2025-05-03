@@ -1,70 +1,61 @@
 import streamlit as st
-st.image('financial fraud detector logo.png', width=200)
 import pandas as pd
+import numpy as np
 import joblib
-import lightgbm as lgb 
 from geopy.distance import geodesic
+from datetime import datetime
 
+# Load model and encoders
 model = joblib.load("fraud_detection_model.jb")
 encoder = joblib.load("label_encoder.jb")
 
-def haversine(lat1, lon1, lat2, lon2):
-    return geodesic((lat1, lon1),(lat2,lon2)).km
+st.set_page_config(page_title="Financial Fraud Detector", page_icon=":money_with_wings:")
+st.title("Financial Fraud Detector")
+st.image("financial fraud detector logo.png", width=200)
 
-st.title("financial fraud detection System")
-st.write("Enter the Transaction details Below")
+# Input fields
+st.header("Enter Transaction Details")
 
-merchant = st.text_input("Merchant Name")
+merchant = st.text_input("Merchant")
 category = st.text_input("Category")
-amt = st.number_input("Transaction Amount", min_value=0.0, format="%.2f")
-lat = st.number_input("Latitude",format="%.6f")
-long = st.number_input("Longitude",format="%.6f")
-merch_lat = st.number_input("Merchant Latitude",format="%.6f")
-merch_long = st.number_input("Merchant Longitude",format="%.6f")
-hour = st.slider("Transaction Hour",0,23,12)
-day =st.slider("Transaction Day",1,31,15)
-month = st.slider("Transaction MOnth",1,12,6)
-gender = st.selectbox("Gender",["Male","Female"])
-cc_num = st.text_input("Credit Card number")
+amt = st.number_input("Amount", min_value=0.0)
+lat = st.number_input("User Latitude", format="%.6f")
+long = st.number_input("User Longitude", format="%.6f")
+merch_lat = st.number_input("Merchant Latitude", format="%.6f")
+merch_long = st.number_input("Merchant Longitude", format="%.6f")
+hour = st.slider("Hour of Day", 0, 23)
+day = st.slider("Day of Month", 1, 31)
+month = st.slider("Month", 1, 12)
+gender = st.selectbox("Gender", ["M", "F"])
+cc_num = st.text_input("Credit Card Number")
 
-distance = haversine(lat,long,merch_lat,merch_long)
+# Calculate distance
+distance = geodesic((lat, long), (merch_lat, merch_long)).miles if all(v != 0.0 for v in [lat, long, merch_lat, merch_long]) else 0.0
 
+# Predict button
 if st.button("Check For Fraud"):
     if merchant and category and cc_num:
-        input_data = pd.DataFrame([[merchant, category,amt,distance,hour,day,month,gender, cc_num]],
-                                  columns=['merchant','category','amt','distance','hour','day','month','gender','cc_num'])
+        input_data = pd.DataFrame([[merchant, category, amt, distance, hour, day, month, gender, cc_num]],
+                                  columns=['merchant', 'category', 'amt', 'distance', 'hour', 'day', 'month', 'gender', 'cc_num'])
         
-        categorical_col = ['merchant','category','gender']
+        # Encode categorical columns
+        categorical_col = ['merchant', 'category', 'gender']
         for col in categorical_col:
             try:
                 input_data[col] = encoder[col].transform(input_data[col])
             except ValueError:
-                input_data[col]=-1
+                input_data[col] = -1
 
+        # Hash credit card number
+        input_data['cc_num'] = input_data['cc_num'].apply(lambda x: hash(x) % (10 ** 2))
 
-import base64
-from PIL import Image
-import streamlit as st
-
-# Display logo at the top of the app
-def display_logo():
-    file_path = "fraud detector logo.png"
-    with open(file_path, "rb") as f:
-        data = f.read()
-        encoded = base64.b64encode(data).decode()
-        st.markdown(
-            f'<div style="text-align: center;"><img src="data:image/png;base64,{encoded}" width="200"/></div>',
-            unsafe_allow_html=True
-        )
-
-display_logo()
-
-        input_data['cc_num'] = input_data['cc_num'].apply(lambda x:hash(x) % (10 ** 2))
+        # Prediction
         prediction = model.predict(input_data)[0]
-    result = "Fraudulent" if prediction[0] == 1 else "Legitimate"
-    st.subheader("Prediction Result:")
-    st.success(f"The transaction is **{result}**.")
-        result = "Fraudulant Transaction" if prediction == 1 else " Legitimate Transaction"
-        st.subheader(f"Prediction: {result}")
+        result = "Fraudulent Transaction" if prediction == 1 else "Legitimate Transaction"
+        st.subheader("Prediction Result:")
+        st.success(f"The transaction is **{result}**.")
     else:
-        st.error("Please Fill all required fields")
+        st.error("Please fill all required fields.")
+
+
+   
